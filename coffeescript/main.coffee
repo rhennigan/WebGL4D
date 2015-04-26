@@ -12,14 +12,12 @@ tVector = vec4.create()
 pVector = vec4.create()
 lightDirectionVector = vec4.create()
 
-randAngle = -> 2.0 * Math.PI * Math.random()
-
-r1Float = randAngle()
-r2Float = randAngle()
-r3Float = randAngle()
-r4Float = randAngle()
-r5Float = randAngle()
-r6Float = randAngle()
+r1Float = 0.0
+r2Float = 0.0
+r3Float = 0.0
+r4Float = 0.0
+r5Float = 0.0
+r6Float = 0.0
 
 vertexPositionBuffer = undefined
 vertexColorBuffer = undefined
@@ -826,7 +824,7 @@ drawScene = (px, py, pz, pw) ->
   vec4.set lightDirectionVector, 0.5, 0.5, -1, -1
   vec4.normalize(lightDirectionVector, lightDirectionVector)
 
-  d = 2.5
+  d = 3
   n = 3
   for x in [-n..n]
     for y in [-n, n]
@@ -909,6 +907,12 @@ modalRotate = (x0, y0) ->
 
 window.auto = true
 
+randAngle = -> Math.random() - 0.5
+rSpeeds = (2.0*randAngle() for i in [1..6])
+updateSpeeds = ->
+  for i in [0..5]
+    rSpeeds[i] += randAngle() / 100
+
 lastTime = 0
 animate = ->
   timeNow = (new Date).getTime()
@@ -920,12 +924,13 @@ animate = ->
     pw += currentDirection.charm * moveSpeed * elapsed
     pw = Math.max(0, pw)
     if auto
-      r1Float += 1.1 * elapsed * rotationSpeed / 50000
-      r2Float += 1.2 * elapsed * rotationSpeed / 50000
-      r3Float += 1.3 * elapsed * rotationSpeed / 50000
-      r4Float += 1.4 * elapsed * rotationSpeed / 50000
-      r5Float += 1.5 * elapsed * rotationSpeed / 50000
-      r6Float += 1.6 * elapsed * rotationSpeed / 50000
+      updateSpeeds()
+      r1Float += rSpeeds[0] * elapsed * rotationSpeed / 50000
+      r2Float += rSpeeds[1] * elapsed * rotationSpeed / 50000
+      r3Float += rSpeeds[2] * elapsed * rotationSpeed / 50000
+      r4Float += rSpeeds[3] * elapsed * rotationSpeed / 50000
+      r5Float += rSpeeds[4] * elapsed * rotationSpeed / 50000
+      r6Float += rSpeeds[5] * elapsed * rotationSpeed / 50000
   lastTime = timeNow
 
 tick = ->
@@ -936,6 +941,8 @@ tick = ->
 
 window.testing = ->
   canvas = document.getElementById 'canvas'
+  canvas.width = window.innerWidth-20
+  canvas.height = window.innerHeight-5
   getMousePos = (event) =>
     rect = canvas.getBoundingClientRect()
     x: event.clientX - rect.left
