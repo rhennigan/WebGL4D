@@ -1019,6 +1019,7 @@ window.testing = ->
     gl.enable(gl.BLEND)
     gl.disable(gl.DEPTH_TEST)
     gl.enable(gl.DEPTH_TEST)
+    document.getElementById('previewImage').style.display = 'none'
     tick()
 
   waitForShaders finishGLInit

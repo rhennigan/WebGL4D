@@ -23,17 +23,21 @@
 
   lightDirectionVector = vec4.create();
 
-  r1Float = 0.0;
+  randAngle = function() {
+    return Math.random() - 0.5;
+  };
 
-  r2Float = 0.0;
+  r1Float = randAngle();
 
-  r3Float = 0.0;
+  r2Float = randAngle();
 
-  r4Float = 0.0;
+  r3Float = randAngle();
 
-  r5Float = 0.0;
+  r4Float = randAngle();
 
-  r6Float = 0.0;
+  r5Float = randAngle();
+
+  r6Float = randAngle();
 
   vertexPositionBuffer = void 0;
 
@@ -394,10 +398,6 @@
 
   window.auto = true;
 
-  randAngle = function() {
-    return Math.random() - 0.5;
-  };
-
   rSpeeds = (function() {
     var j, results;
     results = [];
@@ -564,6 +564,7 @@
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);
       gl.enable(gl.DEPTH_TEST);
+      document.getElementById('previewImage').style.display = 'none';
       return tick();
     };
     return waitForShaders(finishGLInit);
