@@ -449,8 +449,8 @@
   window.testing = function() {
     var canvas, finishGLInit, getMousePos, handleKeyPress, handleKeyRelease, waitForShaders;
     canvas = document.getElementById('canvas');
-    canvas.width = window.innerWidth - 20;
-    canvas.height = window.innerHeight - 5;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     getMousePos = (function(_this) {
       return function(event) {
         var rect;
@@ -569,6 +569,10 @@
     };
     return waitForShaders(finishGLInit);
   };
+
+  window.addEventListener('resize', (function() {
+    return window.location.reload();
+  }));
 
 }).call(this);
 

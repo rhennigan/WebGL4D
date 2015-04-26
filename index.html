@@ -8,42 +8,11 @@
     <script type="text/javascript" src="js/main.js"></script>
 </head>
 <body onload="testing();">
-<canvas id="canvas" width="1280" height="720"></canvas>
+<canvas id="canvas" width="1280" height="720" style="position: absolute; left: 0px; top: 0px;"></canvas>
 <img src="img/preview.jpg" id="previewImage">
-<table>
-    <tr>
-        <th>x</th>
-        <th>y</th>
-    </tr>
-    <tr>
-        <td><input type="button" value="xy" onclick="rotateMode.x = 1;"></td>
-        <td><input type="button" value="xy" onclick="rotateMode.y = 1;"></td>
-    </tr>
-    <tr>
-        <td><input type="button" value="xz" onclick="rotateMode.x = 2;"></td>
-        <td><input type="button" value="xz" onclick="rotateMode.y = 2;"></td>
-    </tr>
-    <tr>
-        <td><input type="button" value="xw" onclick="rotateMode.x = 3;"></td>
-        <td><input type="button" value="xw" onclick="rotateMode.y = 3;"></td>
-    </tr>
-    <tr>
-        <td><input type="button" value="yz" onclick="rotateMode.x = 4;"></td>
-        <td><input type="button" value="yz" onclick="rotateMode.y = 4;"></td>
-    </tr>
-    <tr>
-        <td><input type="button" value="yw" onclick="rotateMode.x = 5;"></td>
-        <td><input type="button" value="yw" onclick="rotateMode.y = 5;"></td>
-    </tr>
-    <tr>
-        <td><input type="button" value="zw" onclick="rotateMode.x = 6;"></td>
-        <td><input type="button" value="zw" onclick="rotateMode.y = 6;"></td>
-    </tr>
-</table>
-<input type="button" value="auto on" onclick="auto = true;">
-<input type="button" value="auto off" onclick="auto = false;">
+
 <div id="wrapper">
-  <div style="position: absolute; z-index: 1; left: 25px; top: 25px; width:200px; height:100px; color:white">
+  <div style="position: absolute; z-index: 1; left: 25px; top: 25px; width:200px; height:150px; color:white">
     <table>
       <tr><td colspan="2">Controls</td></tr>
       <tr><td>W:</td><td>forward</td></tr>
@@ -54,6 +23,38 @@
       <tr><td>Q:</td><td>down</td></tr>
       <tr><td>R:</td><td>ana</td></tr>
       <tr><td>F:</td><td>kata</td></tr>
+    </table>
+    <table>
+      <tr>
+        <th>x</th>
+        <th>y</th>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="xy" onclick="rotateMode.x = 1;"></td>
+        <td><input type="button" style="width:60px" value="xy" onclick="rotateMode.y = 1;"></td>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="xz" onclick="rotateMode.x = 2;"></td>
+        <td><input type="button" style="width:60px" value="xz" onclick="rotateMode.y = 2;"></td>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="xw" onclick="rotateMode.x = 3;"></td>
+        <td><input type="button" style="width:60px" value="xw" onclick="rotateMode.y = 3;"></td>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="yz" onclick="rotateMode.x = 4;"></td>
+        <td><input type="button" style="width:60px" value="yz" onclick="rotateMode.y = 4;"></td>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="yw" onclick="rotateMode.x = 5;"></td>
+        <td><input type="button" style="width:60px" value="yw" onclick="rotateMode.y = 5;"></td>
+      </tr>
+      <tr>
+        <td><input type="button" style="width:60px" value="zw" onclick="rotateMode.x = 6;"></td>
+        <td><input type="button" style="width:60px" value="zw" onclick="rotateMode.y = 6;"></td>
+      </tr>
+      <tr><td><input type="button" style="width:60px" value="auto on" onclick="auto = true;"></td>
+        <td><input type="button" style="width:60px" value="auto off" onclick="auto = false;"></td></tr>
     </table>
   </div>
 </div>

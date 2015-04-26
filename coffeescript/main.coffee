@@ -942,8 +942,8 @@ tick = ->
 
 window.testing = ->
   canvas = document.getElementById 'canvas'
-  canvas.width = window.innerWidth-20
-  canvas.height = window.innerHeight-5
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
   getMousePos = (event) =>
     rect = canvas.getBoundingClientRect()
     x: event.clientX - rect.left
@@ -1023,3 +1023,5 @@ window.testing = ->
     tick()
 
   waitForShaders finishGLInit
+
+window.addEventListener('resize', (() -> window.location.reload()))
