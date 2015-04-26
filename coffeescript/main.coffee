@@ -12,12 +12,13 @@ tVector = vec4.create()
 pVector = vec4.create()
 lightDirectionVector = vec4.create()
 
-r1Float = 0.0
-r2Float = 0.0
-r3Float = 0.0
-r4Float = 0.0
-r5Float = 0.0
-r6Float = 0.0
+randAngle = -> Math.random() - 0.5
+r1Float = randAngle()
+r2Float = randAngle()
+r3Float = randAngle()
+r4Float = randAngle()
+r5Float = randAngle()
+r6Float = randAngle()
 
 vertexPositionBuffer = undefined
 vertexColorBuffer = undefined
@@ -908,7 +909,6 @@ modalRotate = (x0, y0) ->
 
 window.auto = true
 
-randAngle = -> Math.random() - 0.5
 rSpeeds = (2.0*randAngle() for i in [1..6])
 updateSpeeds = ->
   for i in [0..5]
