@@ -861,6 +861,7 @@ drawScene = (px, py, pz, pw) ->
 
 center = {x: 0.0, y: 0.0}
 mouseDragging = false
+dragOffset = {x: 0, y: 0}
 dragStart = {x: 0, y: 0}
 dragCurrent = {x: 0, y: 0}
 currentDirection =
@@ -957,7 +958,7 @@ window.testing = ->
       dragCurrent = getMousePos(e)
       turnRight = (dragStart.x - dragCurrent.x) / canvas.width
       turnUp = (dragStart.y - dragCurrent.y) / canvas.height
-      modalRotate(center.x + turnRight, center.y + turnUp)
+      modalRotate(turnRight, turnUp)
   #      r3Float = center.x + turnRight
   #      r4Float = center.y + turnUp
 
@@ -1013,7 +1014,7 @@ window.testing = ->
   finishGLInit = ->
     initShaders()
     initBuffers()
-    gl.clearColor 0, 0, 0, 1 # default background color: black
+    gl.clearColor 0.1, 0.1, 0.1, 1 # default background color: black
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.enable(gl.BLEND)
     gl.disable(gl.DEPTH_TEST)
