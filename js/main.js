@@ -327,9 +327,9 @@
 
   py = 0;
 
-  pz = 25;
+  pz = 20;
 
-  pw = -50;
+  pw = -30;
 
   rotationSpeed = 4.0 * Math.PI;
 
@@ -427,7 +427,6 @@
       px += currentDirection.right * moveSpeed * elapsed;
       py += currentDirection.up * moveSpeed * elapsed;
       pw += currentDirection.charm * moveSpeed * elapsed;
-      pw = Math.max(0, pw);
       if (auto) {
         updateSpeeds();
         r1Float += rSpeeds[0] * elapsed * rotationSpeed / 50000;
@@ -560,7 +559,7 @@
     finishGLInit = function() {
       initShaders();
       initBuffers();
-      gl.clearColor(0.1, 0.1, 0.1, 1);
+      gl.clearColor(0.1, 0.1, 0.1, .9);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);

@@ -873,8 +873,8 @@ currentDirection =
 moveSpeed = 0.005
 px = 0
 py = 0
-pz = 25
-pw = -50
+pz = 20
+pw = -30
 
 rotationSpeed = 4.0 * Math.PI
 window.rotateMode =
@@ -923,7 +923,7 @@ animate = ->
     px += currentDirection.right * moveSpeed * elapsed
     py += currentDirection.up * moveSpeed * elapsed
     pw += currentDirection.charm * moveSpeed * elapsed
-    pw = Math.max(0, pw)
+    #pw = Math.max(0, pw)
     if auto
       updateSpeeds()
       r1Float += rSpeeds[0] * elapsed * rotationSpeed / 50000
@@ -1014,7 +1014,7 @@ window.testing = ->
   finishGLInit = ->
     initShaders()
     initBuffers()
-    gl.clearColor 0.1, 0.1, 0.1, 1 # default background color: black
+    gl.clearColor 0.1, 0.1, 0.1, .9 # default background color: black
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.enable(gl.BLEND)
     gl.disable(gl.DEPTH_TEST)

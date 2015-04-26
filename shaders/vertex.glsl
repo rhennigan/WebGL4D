@@ -116,8 +116,9 @@ void main(void) {
   
   vec4 rotated = rotation(uR1Float, uR2Float, uR3Float, uR4Float, uR5Float, uR6Float, translated);
   vec4 relativeToCamera = rotated - uPVector;
-  vec4 p = perspective_proj(vec4(0.0, 0.0, 0.0, 35.0), relativeToCamera, 2.0);
-  vec4 homogenous3 = vec4(p[0], p[1], p[2], 1.0);
+  vec4 p = perspective_proj(vec4(0.0, 0.0, 0.0, -1.0), relativeToCamera, 3.0);
+  // vec4 homogenous3 = vec4(p[0], p[1], p[2], 1.0);
+  vec4 homogenous3 = vec4(p[0], p[1], p[2], p[3]);
 
   gl_Position = uPMatrix * uMVMatrix * homogenous3;
 
@@ -125,7 +126,7 @@ void main(void) {
     vColor = vec4(0.0, 0.0, 0.0, 1.0);
   } else {
     vColor = 0.1*aVertexColor + 0.9*intensity*aVertexColor;
-    vColor[3] = 0.5;
+    vColor[3] = 0.75;
   }
   
   // float r = aVertexColor[0];
