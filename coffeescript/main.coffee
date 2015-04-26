@@ -825,7 +825,7 @@ drawScene = (px, py, pz, pw) ->
   vec4.set lightDirectionVector, 0.5, 0.5, -1, -1
   vec4.normalize(lightDirectionVector, lightDirectionVector)
 
-  d = 3
+  d = 2.0 + Math.sqrt(Math.sin((new Date).getTime() / 5000) / 2 + 0.5)
   n = 3
   for x in [-n..n]
     for y in [-n, n]
@@ -874,7 +874,7 @@ currentDirection =
 moveSpeed = 0.005
 px = 0
 py = 0
-pz = 20
+pz = 25
 pw = -30
 
 rotationSpeed = 4.0 * Math.PI
@@ -1025,3 +1025,24 @@ window.testing = ->
   waitForShaders finishGLInit
 
 window.addEventListener('resize', (() -> window.location.reload()))
+
+window.udb = () ->
+  document.getElementById('bx0').style.background = 'white'
+  document.getElementById('by0').style.background = 'white'
+  document.getElementById('bx1').style.background = 'white'
+  document.getElementById('by1').style.background = 'white'
+  document.getElementById('bx2').style.background = 'white'
+  document.getElementById('by2').style.background = 'white'
+  document.getElementById('bx3').style.background = 'white'
+  document.getElementById('by3').style.background = 'white'
+  document.getElementById('bx4').style.background = 'white'
+  document.getElementById('by4').style.background = 'white'
+  document.getElementById('bx5').style.background = 'white'
+  document.getElementById('by5').style.background = 'white'
+
+  idx = "bx#{rotateMode.x}"
+  idy = "by#{rotateMode.y}"
+
+  document.getElementById(idx).style.background = 'red'
+  document.getElementById(idy).style.background = 'red'
+

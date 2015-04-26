@@ -215,7 +215,7 @@
     vec4.set(pVector, px, py, pz, pw);
     vec4.set(lightDirectionVector, 0.5, 0.5, -1, -1);
     vec4.normalize(lightDirectionVector, lightDirectionVector);
-    d = 3;
+    d = 2.0 + Math.sqrt(Math.sin((new Date).getTime() / 5000) / 2 + 0.5);
     n = 3;
     for (x = j = ref = -n, ref1 = n; ref <= ref1 ? j <= ref1 : j >= ref1; x = ref <= ref1 ? ++j : --j) {
       ref2 = [-n, n];
@@ -331,7 +331,7 @@
 
   py = 0;
 
-  pz = 20;
+  pz = 25;
 
   pw = -30;
 
@@ -573,6 +573,26 @@
   window.addEventListener('resize', (function() {
     return window.location.reload();
   }));
+
+  window.udb = function() {
+    var idx, idy;
+    document.getElementById('bx0').style.background = 'white';
+    document.getElementById('by0').style.background = 'white';
+    document.getElementById('bx1').style.background = 'white';
+    document.getElementById('by1').style.background = 'white';
+    document.getElementById('bx2').style.background = 'white';
+    document.getElementById('by2').style.background = 'white';
+    document.getElementById('bx3').style.background = 'white';
+    document.getElementById('by3').style.background = 'white';
+    document.getElementById('bx4').style.background = 'white';
+    document.getElementById('by4').style.background = 'white';
+    document.getElementById('bx5').style.background = 'white';
+    document.getElementById('by5').style.background = 'white';
+    idx = "bx" + rotateMode.x;
+    idy = "by" + rotateMode.y;
+    document.getElementById(idx).style.background = 'red';
+    return document.getElementById(idy).style.background = 'red';
+  };
 
 }).call(this);
 
