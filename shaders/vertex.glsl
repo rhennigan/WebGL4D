@@ -2,7 +2,6 @@ attribute vec4 aVertexPosition;
 attribute vec4 aVertexNormal;
 attribute vec4 aVertexColor;
 
-uniform mat4 uNormalMatrix;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform vec4 uTVector;
@@ -108,12 +107,9 @@ vec4 rotation(float t1, float t2, float t3, float t4, float t5, float t6, vec4 p
 
 void main(void) {
   // vec4 rotated = rotation(1.0*uRFloat, 2.0*uRFloat, 3.0*uRFloat, 4.0*uRFloat, 5.0*uRFloat, 6.0*uRFloat, aVertexPosition);
-  vec4 ambientLight = vec4(0.25, 0.25, 0.25, 1.0);
-  vec4 directionalLightColor = vec4(0.75, 0.75, 0.75, 1.0);
-  vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal);
-  // vec4 normal = rotation(uR1Float, uR2Float, uR3Float, uR4Float, uR5Float, uR6Float, aVertexNormal);
+  vec4 normal = rotation(-uR1Float, -uR2Float, -uR3Float, -uR4Float, -uR5Float, -uR6Float, aVertexNormal);
   //vec4 normal = aVertexNormal;
-  float intensity = max(dot(transformedNormal, uLightDirection), 0.0);
+  float intensity = max(dot(normal, uLightDirection), 0.0);
   // vec4 translated = rotated + uTVector;
   // vec4 p = perspective_proj(vec4(0.0, 0.0, 0.0, 0.3), translated);
   vec4 translated = aVertexPosition + uTVector;

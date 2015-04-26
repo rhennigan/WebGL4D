@@ -213,7 +213,7 @@
     mat4.perspective(pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.001, 100.0);
     mat4.identity(mvMatrix);
     vec4.set(pVector, px, py, pz, pw);
-    vec4.set(lightDirectionVector, 1, 1, 1, 1);
+    vec4.set(lightDirectionVector, 0.5, 0.5, -1, -1);
     vec4.normalize(lightDirectionVector, lightDirectionVector);
     d = 2.5;
     n = 3;
@@ -330,7 +330,7 @@
 
   pw = -50;
 
-  rotationSpeed = 2.0 * Math.PI;
+  rotationSpeed = 4.0 * Math.PI;
 
   window.rotateMode = {
     x: 1,
