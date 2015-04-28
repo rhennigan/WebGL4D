@@ -1,67 +1,203 @@
 <!DOCTYPE html>
 <html>
 <head lang="en">
-    <meta charset="UTF-8">
-    <title>Hypercubes</title>
-    <script type="text/javascript" src="lib/gl-matrix.js"></script>
-    <script type="text/javascript" src="lib/webgl-utils.js"></script>
-    <script type="text/javascript" src="lib/dat.gui.js"></script>
-    <script type="text/javascript" src="js/main.js"></script>
+  <meta charset="UTF-8">
+  <title>Hypercubes</title>
+  <script type="text/javascript" src="lib/gl-matrix.js"></script>
+  <script type="text/javascript" src="lib/webgl-utils.js"></script>
+  <script type="text/javascript" src="lib/dat.gui.js"></script>
+  <script type="text/javascript" src="js/main.js"></script>
+
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 position;
+    attribute vec2 texCoord1;
+
+    uniform mat4 worldMatrix;
+    uniform mat4 projectionMatrix;
+
+    varying vec2 pos;
+    void main(void) {
+      gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
+      pos = texCoord1;
+   }
+
+  </script>
+
+  <script id="shader-fs" type="x-shader/x-fragment">
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  #define S(x, a, b) ((x) < (a) ? (a) : (x) > (b) ? (b) : (x))
+  #define INT(x, a, b) (((x) - (a)) / ((b) - (a)))
+
+  #define PI 3.1415926535
+  #define SCALE 80.0
+  #define MAG 5.0
+
+  #define c11 0.843
+  #define c12 0.878
+  #define c13 0.898
+
+  #define cr1 0.839
+  #define cr2 0.290
+  #define cr3 0.152
+
+  #define c21 0.047
+  #define c22 0.352
+  #define c23 0.505
+
+  #define c31 0.000
+  #define c32 0.000
+  #define c33 0.000
+
+  #define c41 0.556
+  #define c42 0.678
+  #define c43 0.670
+
+  #define c51 1.000
+  #define c52 1.000
+  #define c53 1.000
+
+  uniform sampler2D sampler1;
+  uniform float p;
+  uniform int order;
+  uniform float aspect;
+
+  varying vec2 pos;
+
+  vec4 color_px(float val, float p) {
+    const float p1 = 0.00;
+    const float p2 = 0.50;
+    const float p3 = 0.90;
+
+    float t = 0.5 * (sin(4.0 * p) + 1.0);
+
+    vec4 col = vec4(0.0, 0.0, 0.0, 1.0);
+    float v = S(val, 0.0, 1.0);
+    if (v <= -0.00001) {
+      col[0] = 0.0;
+      col[1] = 0.0;
+      col[2] = 0.0;
+    } else if (v < p1) {
+      float t2 = INT(v, 0.0, p1);
+      float t1 = 1.0 - t2;
+      col[0] = t1 * c11 + t2 * (t*c21+(1.0-t)*cr1);
+      col[1] = t1 * c12 + t2 * (t*c22+(1.0-t)*cr2);
+      col[2] = t1 * c13 + t2 * (t*c23+(1.0-t)*cr3);
+    } else if (v < p2) {
+      float t2 = INT(v, p1, p2);
+      float t1 = 1.0 - t2;
+      col[0] = t1 * (t*c21+(1.0-t)*cr1) + t2 * c31;
+      col[1] = t1 * (t*c22+(1.0-t)*cr2) + t2 * c32;
+      col[2] = t1 * (t*c23+(1.0-t)*cr3) + t2 * c33;
+    } else if (v < p3) {
+      float t2 = INT(v, p2, p3);
+      float t1 = 1.0 - t2;
+      col[0] = t1 * c31 + t2 * c41;
+      col[1] = t1 * c32 + t2 * c42;
+      col[2] = t1 * c33 + t2 * c43;
+    } else {
+      float t2 = INT(v, p3, 1.0);
+      float t1 = 1.0 - t2;
+      col[0] = t1 * c41 + t2 * c51;
+      col[1] = t1 * c42 + t2 * c52;
+      col[2] = t1 * c43 + t2 * c53;
+    }
+
+    return col;
+  }
+
+  void main(void) {
+    float d = float(order);
+    float sum = 0.0;
+    float dX = 0.5 * p;
+    float dY = 0.2 * p;
+    float s = SCALE * (sin(p) + 1.5) + float(5*order);
+
+    // float x = pos.x + dX;
+    // float y = pos.y + dY;
+
+    float x = dX + aspect * pos.x * cos(p) - pos.y * sin(p);
+    float y = dY + pos.y * cos(p) + aspect * pos.x * sin(p);
+
+    for (int k = 0; k < 30; k++) {
+      if (k < order) {
+        sum += cos(s * x * cos(float(k) * PI / d) -
+                   s * y * sin(float(k) * PI / d) + 40.0*p);
+      }
+    }
+    sum *= MAG;
+    sum = atan(sum) / (1.0 * PI) + 0.5;
+
+    vec4 color = vec4(sum, sum, sum, 0.5*sum + 0.5);
+    // vec4 color = color_px(sum, p);
+
+    gl_FragColor = color;
+  }
+
+  </script>
 </head>
-<body onload="testing(); udb();">
+<body>
+<canvas id="qcCanvas" width="512" height="512" style="display: none;"></canvas>
 <canvas id="canvas" width="1280" height="720" style="position: absolute; left: 0px; top: 0px;"></canvas>
 <img src="img/preview.jpg" id="previewImage">
 
 <div id="wrapper">
-  <div style="position: absolute; z-index: 1; left: 10px; top: 10px; width:100px; height:150px; color:white">
+  <div style="position: absolute; z-index: 1; left: 10px; top: 10px; width:200px; height:150px; color:white">
     <table>
-      <tr><td colspan="2">Controls</td></tr>
-      <tr><td>W:</td><td>forward</td></tr>
-      <tr><td>S:</td><td>back</td></tr>
-      <tr><td>A:</td><td>left</td></tr>
-      <tr><td>D:</td><td>right</td></tr>
-      <tr><td>E:</td><td>up</td></tr>
-      <tr><td>Q:</td><td>down</td></tr>
-      <tr><td>R:</td><td>ana</td></tr>
-      <tr><td>F:</td><td>kata</td></tr>
+      <tr>
+        <td colspan="2">Controls</td>
+      </tr>
+      <tr>
+        <td>W:</td>
+        <td>forward</td>
+      </tr>
+      <tr>
+        <td>S:</td>
+        <td>back</td>
+      </tr>
+      <tr>
+        <td>A:</td>
+        <td>left</td>
+      </tr>
+      <tr>
+        <td>D:</td>
+        <td>right</td>
+      </tr>
+      <tr>
+        <td>E:</td>
+        <td>up</td>
+      </tr>
+      <tr>
+        <td>Q:</td>
+        <td>down</td>
+      </tr>
+      <tr>
+        <td>R:</td>
+        <td>ana</td>
+      </tr>
+      <tr>
+        <td>F:</td>
+        <td>kata</td>
+      </tr>
+      <tr>
+        <td colspan="2">Click and drag to rotate</td>
+      </tr>
     </table>
     <br>
     <table>
       <tr>
-        <th colspan="2">rotations</th>
+        <td colspan="2">
+          <div id="fps">fps</div>
+        </td>
       </tr>
-      <tr>
-        <th>x</th>
-        <th>y</th>
-      </tr>
-      <tr>
-        <td><input id="bx0" type="button" style="width:60px" value="xy" onclick="rotateMode.x = 0; udb();"></td>
-        <td><input id="by0" type="button" style="width:60px" value="xy" onclick="rotateMode.y = 0; udb();"></td>
-      </tr>
-      <tr>
-        <td><input id="bx1" type="button" style="width:60px" value="xz" onclick="rotateMode.x = 1; udb();"></td>
-        <td><input id="by1" type="button" style="width:60px" value="xz" onclick="rotateMode.y = 1; udb();"></td>
-      </tr>
-      <tr>
-        <td><input id="bx2" type="button" style="width:60px" value="xw" onclick="rotateMode.x = 2; udb();"></td>
-        <td><input id="by2" type="button" style="width:60px" value="xw" onclick="rotateMode.y = 2; udb();"></td>
-      </tr>
-      <tr>
-        <td><input id="bx3" type="button" style="width:60px" value="yz" onclick="rotateMode.x = 3; udb();"></td>
-        <td><input id="by3" type="button" style="width:60px" value="yz" onclick="rotateMode.y = 3; udb();"></td>
-      </tr>
-      <tr>
-        <td><input id="bx4" type="button" style="width:60px" value="yw" onclick="rotateMode.x = 4; udb();"></td>
-        <td><input id="by4" type="button" style="width:60px" value="yw" onclick="rotateMode.y = 4; udb();"></td>
-      </tr>
-      <tr>
-        <td><input id="bx5" type="button" style="width:60px" value="zw" onclick="rotateMode.x = 5; udb();"></td>
-        <td><input id="by5" type="button" style="width:60px" value="zw" onclick="rotateMode.y = 5; udb();"></td>
-      </tr>
-      <tr><td><input type="button" style="width:60px" value="auto on" onclick="auto = true;"></td>
-        <td><input type="button" style="width:60px" value="auto off" onclick="auto = false;"></td></tr>
     </table>
   </div>
 </div>
+
+<script src="PhiloGL.js"></script>
+<script src="qc.js"></script>
+
 </body>
 </html>

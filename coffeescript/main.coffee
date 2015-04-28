@@ -1,13 +1,33 @@
 class Main
-  cornerNormals: false
+  # GUI control variables
+  cornerNormals: true
   meshBool: true
-  meshColorGui: [0.0, 0.0, 0.0, 1.0]
-  meshColor: vec4.fromValues(0.0, 0.0, 0.0, 1.0)
-  separation: 0.5
-  cellCount: 3
+  meshColorGui: [255, 255, 255, 1.0]
+  meshColor: vec4.fromValues(255, 255, 255, 1.0)
+  separation: 1.0
+  cellCount: 2
   GLDepthTest: true
   GLBlend: true
+  lightX: 0.5
+  lightY: 0.5
+  lightZ: 1.0
+  lightW: 1.0
+  autoRotate: true
+  autoRotateSpeed: 4.0 * Math.PI
+  rhXY: 0.5
+  rhXZ: 1.0
+  rhXW: 1.5
+  rhYZ: 0.0
+  rhYW: 0.0
+  rhZW: 0.0
+  rvXY: 0.0
+  rvXZ: 0.0
+  rvXW: 0.0
+  rvYZ: 0.5
+  rvYW: 1.0
+  rvZW: 1.5
 
+  # "global" variables
   gl = undefined
   shaders =
     fragReady: false
@@ -30,13 +50,17 @@ class Main
   r5Float = randAngle()
   r6Float = randAngle()
 
+  # put GL buffers in scope
   vertexPositionBuffer = undefined
+  vertexTextureCoordinateBuffer = undefined
   vertexColorBuffer = undefined
   vertexNormalBuffer = undefined
   vertexCornerNormalBuffer = undefined
   vertexIndexBuffer = undefined
   vertexLinePositionBuffer = undefined
   vertexLineIndexBuffer = undefined
+
+  cubeTexture = undefined
 
   initGL = (canvas) ->
     try
@@ -58,14 +82,22 @@ class Main
           shaders.frag = gl.createShader gl.FRAGMENT_SHADER
           gl.shaderSource shaders.frag, sourceString
           gl.compileShader shaders.frag
-          shaders.fragReady = true
+          if not gl.getShaderParameter(shaders.frag, gl.COMPILE_STATUS)
+            console.log("Error compiling frag: " + gl.getShaderInfoLog(shaders.frag))
+          else
+            shaders.fragReady = true
         else if type is 'vert'
           shaders.vert = gl.createShader gl.VERTEX_SHADER
           gl.shaderSource shaders.vert, sourceString
           gl.compileShader shaders.vert
-          shaders.vertReady = true
+          if not gl.getShaderParameter(shaders.vert, gl.COMPILE_STATUS)
+            console.log("Error compiling vert: " + gl.getShaderInfoLog(shaders.vert))
+          else
+            shaders.vertReady = true
         else
           alert "unknown shader type: #{type}"
+
+
     request.send()
 
   initShaders = ->
@@ -83,12 +115,20 @@ class Main
         alert "failed to initialize shaders"
       else
         gl.useProgram shaderProgram
+
+        # vertex attributes
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation shaderProgram, "aVertexPosition"
-        shaderProgram.vertexColorAttribute = gl.getAttribLocation shaderProgram, "aVertexColor"
         shaderProgram.vertexNormalAttribute = gl.getAttribLocation shaderProgram, "aVertexNormal"
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation shaderProgram, "aVertexColor"
+        shaderProgram.vertexTextureCoordinateAttribute = gl.getAttribLocation shaderProgram, "aTextureCoord"
+
+        # model data
         gl.enableVertexAttribArray shaderProgram.vertexPositionAttribute
-        gl.enableVertexAttribArray shaderProgram.vertexColorAttribute
         gl.enableVertexAttribArray shaderProgram.vertexNormalAttribute
+        gl.enableVertexAttribArray shaderProgram.vertexColorAttribute
+        gl.enableVertexAttribArray shaderProgram.vertexTextureCoordinateAttribute
+
+        # uniforms (manipulate these)
         shaderProgram.pMatrixUniform = gl.getUniformLocation shaderProgram, "uPMatrix"
         shaderProgram.mvMatrixUniform = gl.getUniformLocation shaderProgram, "uMVMatrix"
         shaderProgram.tVectorUniform = gl.getUniformLocation shaderProgram, "uTVector"
@@ -117,6 +157,52 @@ class Main
     gl.uniform1f shaderProgram.r6FloatUniform, r6Float
     gl.uniform1i shaderProgram.meshBoolUniform, window.main.meshBool
     gl.uniform4fv shaderProgram.meshColorUniform, window.main.meshColor
+
+  window.createCubeTexture = (text) ->
+    # create a hidden canvas to draw the texture
+#    canvas = document.createElement('canvas')
+#    canvas.id = 'hiddenCanvas'
+#    canvas.width = 256
+#    canvas.height = 256
+#    canvas.style.display = 'none'
+#    body = document.getElementsByTagName('body')[0]
+#    body.appendChild canvas
+    # draw texture
+    cubeImage = document.getElementById('qcCanvas')
+#    ctx = cubeImage.getContext('2d')
+#    ctx.beginPath()
+#    ctx.rect 0, 0, ctx.canvas.width, ctx.canvas.height
+#    ctx.fillStyle = 'white'
+#    ctx.fill()
+#    ctx.fillStyle = 'black'
+#    ctx.font = '24px Arial'
+#    ctx.textAlign = 'center'
+#    ctx.fillText text, ctx.canvas.width / 2, ctx.canvas.height / 2
+#    ctx.restore()
+    # create new texture
+    cubeTexture = texture = gl.createTexture()
+    gl.bindTexture gl.TEXTURE_2D, texture
+    gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR
+    gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST
+    gl.pixelStorei gl.UNPACK_FLIP_Y_WEBGL, true
+    handleTextureLoaded cubeImage, texture
+    texture
+
+#  createCubeTexture = (text) ->
+#    texture = gl.createTexture()
+#    image = new Image()
+#    image.onload = (() -> handleTextureLoaded(image, texture))
+#    image.src = 'img/texture.png'
+#    texture
+
+
+  handleTextureLoaded = (image, texture) ->
+    gl.bindTexture gl.TEXTURE_2D, texture
+    gl.texImage2D gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image
+    gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR
+    gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST
+    gl.generateMipmap gl.TEXTURE_2D
+    gl.bindTexture gl.TEXTURE_2D, null
 
   initBuffers = ->
   # vertex positions
@@ -320,6 +406,208 @@ class Main
     gl.bufferData gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW
     vertexPositionBuffer.itemSize = 4
     vertexPositionBuffer.numItems = 192
+
+    # vertex to texture UV coordinates
+    vertexTextureCoordinateBuffer = gl.createBuffer()
+    gl.bindBuffer gl.ARRAY_BUFFER, vertexTextureCoordinateBuffer
+    textureCoordinates =
+      [
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0
+      ]
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW)
+    vertexTextureCoordinateBuffer.itemSize = 2
+    vertexTextureCoordinateBuffer.numItems = 192
 
     # triangle vertex colors
     vertexColorBuffer = gl.createBuffer()
@@ -815,22 +1103,19 @@ class Main
       gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute,
           vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0)
 
-    if window.main.meshBool
-      # setup line positions
-      gl.bindBuffer gl.ARRAY_BUFFER, vertexLinePositionBuffer
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute,
-          vertexLinePositionBuffer.itemSize, gl.FLOAT, false, 0, 0)
-
-      # setup line index
-      gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, vertexLineIndexBuffer
-      setMatrixUniforms()
-      gl.uniform1i shaderProgram.meshBoolUniform, true
-      gl.drawElements gl.LINES, vertexLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0
-
     # setup positions
     gl.bindBuffer gl.ARRAY_BUFFER, vertexPositionBuffer
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute,
         vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0)
+
+    # setup texture
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordinateBuffer)
+    gl.vertexAttribPointer(shaderProgram.vertexTextureCoordinateAttribute,
+      vertexTextureCoordinateBuffer.itemSize, gl.FLOAT, false, 0, 0)
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+    gl.uniform1i(gl.getUniformLocation(shaderProgram, "uSampler"), 0);
 
     # setup triangle index
     gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer
@@ -838,8 +1123,22 @@ class Main
     gl.uniform1i shaderProgram.meshBoolUniform, false
     gl.drawElements gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0
 
+    # draw mesh
+    if window.main.meshBool
+      # setup line positions
+      gl.bindBuffer gl.ARRAY_BUFFER, vertexLinePositionBuffer
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute,
+        vertexLinePositionBuffer.itemSize, gl.FLOAT, false, 0, 0)
+
+      # setup line index
+      gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, vertexLineIndexBuffer
+      setMatrixUniforms()
+      gl.uniform1i shaderProgram.meshBoolUniform, true
+      gl.drawElements gl.LINES, vertexLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0
+
   drawScene = (px, py, pz, pw) ->
-  # get scene ready
+    createCubeTexture(' ')
+    # get scene ready
     gl.viewport 0, 0, gl.viewportWidth, gl.viewportHeight
     gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     mat4.perspective pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.01, 100.0
@@ -848,7 +1147,7 @@ class Main
     #mat4.rotate(mvMatrix, mvMatrix, 1.0, new Float32Array([1, 1, 1]))
 
     vec4.set pVector, px, py, pz, pw
-    vec4.set lightDirectionVector, 0.5, 0.5, -1, -1
+    vec4.set lightDirectionVector, window.main.lightX, window.main.lightY, window.main.lightZ, window.main.lightW
     vec4.normalize(lightDirectionVector, lightDirectionVector)
 
     #d = 2.0 + Math.sqrt(Math.sin((new Date).getTime() / 5000) / 2 + 0.5)
@@ -878,15 +1177,6 @@ class Main
           for w in [-n..n]
             drawTesseract(d * x, d * y, d * z, d * w)
 
-
-  #  d = 3
-  #  for x in [-1..1]
-  #    for y in [-1..1]
-  #      for z in [-1..1]
-  #        for w in [-1..1]
-  #          if not (x == 0 and y == 0 and z == 0 and w == 0)
-  #            drawTesseract(d * x, d * y, d * z, d * w)
-
   center = {x: 0.0, y: 0.0}
   mouseDragging = false
   dragOffset = {x: 0, y: 0}
@@ -898,43 +1188,21 @@ class Main
     up: 0
     charm: 0
 
-  moveSpeed = 0.005
+  moveSpeed = 0.01
   px = 0
   py = 0
   pz = 25
   pw = -30
 
-  rotationSpeed = 4.0 * Math.PI
-  window.rotateMode =
-    x: 1
-    y: 4
-
-  stepRotationMode = (dir) ->
-    center = {x: 0.0, y: 0.0}
-    switch dir
-      when 0 then rotateMode.x = (rotateMode.x + 1) % 6
-      when 1 then rotateMode.y = (rotateMode.y + 1) % 6
-    console.log("rotation mode: #{rotateMode}")
-
   modalRotate = (x0, y0) ->
-    x = rotationSpeed * x0
-    y = rotationSpeed * y0
-    switch rotateMode.x
-      when 0 then r1Float = x
-      when 1 then r2Float = x
-      when 2 then r3Float = x
-      when 3 then r4Float = x
-      when 4 then r5Float = x
-      when 5 then r6Float = x
-    switch rotateMode.y
-      when 0 then r1Float = y
-      when 1 then r2Float = y
-      when 2 then r3Float = y
-      when 3 then r4Float = y
-      when 4 then r5Float = y
-      when 5 then r6Float = y
-
-  window.auto = true
+    x = x0 * 2.0 * Math.PI
+    y = y0 * 2.0 * Math.PI
+    r1Float = window.main.rhXY*x + window.main.rvXY*y
+    r2Float = window.main.rhXZ*x + window.main.rvXZ*y
+    r3Float = window.main.rhXW*x + window.main.rvXW*y
+    r4Float = window.main.rhYZ*x + window.main.rvYZ*y
+    r5Float = window.main.rhYW*x + window.main.rvYW*y
+    r6Float = window.main.rhZW*x + window.main.rvZW*y
 
   rSpeeds = (2.0*randAngle() for i in [1..6])
   updateSpeeds = ->
@@ -951,18 +1219,31 @@ class Main
       py += currentDirection.up * moveSpeed * elapsed
       pw += currentDirection.charm * moveSpeed * elapsed
       #pw = Math.max(0, pw)
-      if auto
+      if window.main.autoRotate
         updateSpeeds()
-        r1Float += rSpeeds[0] * elapsed * rotationSpeed / 50000
-        r2Float += rSpeeds[1] * elapsed * rotationSpeed / 50000
-        r3Float += rSpeeds[2] * elapsed * rotationSpeed / 50000
-        r4Float += rSpeeds[3] * elapsed * rotationSpeed / 50000
-        r5Float += rSpeeds[4] * elapsed * rotationSpeed / 50000
-        r6Float += rSpeeds[5] * elapsed * rotationSpeed / 50000
+        r1Float += rSpeeds[0] * elapsed * window.main.autoRotateSpeed / 50000
+        r2Float += rSpeeds[1] * elapsed * window.main.autoRotateSpeed / 50000
+        r3Float += rSpeeds[2] * elapsed * window.main.autoRotateSpeed / 50000
+        r4Float += rSpeeds[3] * elapsed * window.main.autoRotateSpeed / 50000
+        r5Float += rSpeeds[4] * elapsed * window.main.autoRotateSpeed / 50000
+        r6Float += rSpeeds[5] * elapsed * window.main.autoRotateSpeed / 50000
     lastTime = timeNow
+
+  timeNow = 0
+  fps = 0
+  timeLast = 0
+
+  computeFPS = ->
+    timeNow = new Date().getTime()
+    fps++
+    if timeNow - timeLast >= 1000
+      document.getElementById('fps').innerHTML = "FPS: #{Number(fps * 1000.0 / (timeNow - timeLast)).toPrecision( 5 )}"
+      timeLast = timeNow
+      fps = 0
 
   tick = ->
     requestAnimFrame tick
+    computeFPS()
     drawScene(px, py, pz, pw)
     animate()
   # console.log(rFloat)
@@ -1032,6 +1313,9 @@ class Main
     loadShader 'shaders/fragment.glsl', 'frag'
     loadShader 'shaders/vertex.glsl', 'vert'
 
+    # update texture
+    cubeTexture = createCubeTexture("Hello World!")
+
     waitForShaders = (continuation) ->
       if not (shaders.fragReady and shaders.vertReady)
         setTimeout (-> waitForShaders continuation), 10
@@ -1041,7 +1325,7 @@ class Main
     finishGLInit = ->
       initShaders()
       initBuffers()
-      gl.clearColor 0.125, 0.125, 0.125, 1 # default background color: black
+      gl.clearColor 0.0, 0.0, 0.0, 1 # default background color: black
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
       gl.enable(gl.BLEND)
       gl.disable(gl.DEPTH_TEST)
@@ -1054,28 +1338,9 @@ class Main
 
   window.addEventListener('resize', (() -> window.location.reload()))
 
-  window.udb = () ->
-    document.getElementById('bx0').style.background = 'white'
-    document.getElementById('by0').style.background = 'white'
-    document.getElementById('bx1').style.background = 'white'
-    document.getElementById('by1').style.background = 'white'
-    document.getElementById('bx2').style.background = 'white'
-    document.getElementById('by2').style.background = 'white'
-    document.getElementById('bx3').style.background = 'white'
-    document.getElementById('by3').style.background = 'white'
-    document.getElementById('bx4').style.background = 'white'
-    document.getElementById('by4').style.background = 'white'
-    document.getElementById('bx5').style.background = 'white'
-    document.getElementById('by5').style.background = 'white'
-
-    idx = "bx#{rotateMode.x}"
-    idy = "by#{rotateMode.y}"
-
-    document.getElementById(idx).style.background = 'red'
-    document.getElementById(idy).style.background = 'red'
-
 window.onload = () ->
   window.main = new Main()
+  window.testing()
   gui = new dat.GUI()
   gui.add(main, 'cornerNormals')
   gui.add(main, 'meshBool')
@@ -1094,4 +1359,30 @@ window.onload = () ->
   glbController.onChange((v) ->
     GL = window.main.GL
     if v then GL.enable(GL.BLEND) else GL.disable(GL.BLEND))
+  folderLightDirection = gui.addFolder('light direction')
+  folderLightDirection.add(main, 'lightX')
+  folderLightDirection.add(main, 'lightY')
+  folderLightDirection.add(main, 'lightZ')
+  folderLightDirection.add(main, 'lightW')
+  folderLightDirection.open()
+  gui.add(main, 'autoRotate')
+  gui.add(main, 'autoRotateSpeed')
+  folderRotationControl = gui.addFolder('rotation control')
+  horizontalRotations = folderRotationControl.addFolder('horizontal')
+  horizontalRotations.add(main, 'rhXY')
+  horizontalRotations.add(main, 'rhXZ')
+  horizontalRotations.add(main, 'rhXW')
+  horizontalRotations.add(main, 'rhYZ')
+  horizontalRotations.add(main, 'rhYW')
+  horizontalRotations.add(main, 'rhZW')
+  verticalRotations = folderRotationControl.addFolder('vertical')
+  verticalRotations.add(main, 'rvXY')
+  verticalRotations.add(main, 'rvXZ')
+  verticalRotations.add(main, 'rvXW')
+  verticalRotations.add(main, 'rvYZ')
+  verticalRotations.add(main, 'rvYW')
+  verticalRotations.add(main, 'rvZW')
+  folderRotationControl.open()
+  horizontalRotations.open()
+  verticalRotations.open()
 

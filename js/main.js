@@ -3,25 +3,61 @@
   var Main;
 
   Main = (function() {
-    var animate, center, currentDirection, dragCurrent, dragOffset, dragStart, drawScene, drawTesseract, gl, i, initBuffers, initGL, initShaders, lastTime, lightDirectionVector, loadShader, modalRotate, mouseDragging, moveSpeed, mvMatrix, pMatrix, pVector, pw, px, py, pz, r1Float, r2Float, r3Float, r4Float, r5Float, r6Float, rSpeeds, randAngle, rotationSpeed, setMatrixUniforms, shaderProgram, shaders, stepRotationMode, tVector, tick, updateSpeeds, vertexColorBuffer, vertexCornerNormalBuffer, vertexIndexBuffer, vertexLineIndexBuffer, vertexLinePositionBuffer, vertexNormalBuffer, vertexPositionBuffer;
+    var animate, center, computeFPS, cubeTexture, currentDirection, dragCurrent, dragOffset, dragStart, drawScene, drawTesseract, fps, gl, handleTextureLoaded, i, initBuffers, initGL, initShaders, lastTime, lightDirectionVector, loadShader, modalRotate, mouseDragging, moveSpeed, mvMatrix, pMatrix, pVector, pw, px, py, pz, r1Float, r2Float, r3Float, r4Float, r5Float, r6Float, rSpeeds, randAngle, setMatrixUniforms, shaderProgram, shaders, tVector, tick, timeLast, timeNow, updateSpeeds, vertexColorBuffer, vertexCornerNormalBuffer, vertexIndexBuffer, vertexLineIndexBuffer, vertexLinePositionBuffer, vertexNormalBuffer, vertexPositionBuffer, vertexTextureCoordinateBuffer;
 
     function Main() {}
 
-    Main.prototype.cornerNormals = false;
+    Main.prototype.cornerNormals = true;
 
     Main.prototype.meshBool = true;
 
-    Main.prototype.meshColorGui = [0.0, 0.0, 0.0, 1.0];
+    Main.prototype.meshColorGui = [255, 255, 255, 1.0];
 
-    Main.prototype.meshColor = vec4.fromValues(0.0, 0.0, 0.0, 1.0);
+    Main.prototype.meshColor = vec4.fromValues(255, 255, 255, 1.0);
 
-    Main.prototype.separation = 0.5;
+    Main.prototype.separation = 1.0;
 
-    Main.prototype.cellCount = 3;
+    Main.prototype.cellCount = 2;
 
     Main.prototype.GLDepthTest = true;
 
     Main.prototype.GLBlend = true;
+
+    Main.prototype.lightX = 0.5;
+
+    Main.prototype.lightY = 0.5;
+
+    Main.prototype.lightZ = 1.0;
+
+    Main.prototype.lightW = 1.0;
+
+    Main.prototype.autoRotate = true;
+
+    Main.prototype.autoRotateSpeed = 4.0 * Math.PI;
+
+    Main.prototype.rhXY = 0.5;
+
+    Main.prototype.rhXZ = 1.0;
+
+    Main.prototype.rhXW = 1.5;
+
+    Main.prototype.rhYZ = 0.0;
+
+    Main.prototype.rhYW = 0.0;
+
+    Main.prototype.rhZW = 0.0;
+
+    Main.prototype.rvXY = 0.0;
+
+    Main.prototype.rvXZ = 0.0;
+
+    Main.prototype.rvXW = 0.0;
+
+    Main.prototype.rvYZ = 0.5;
+
+    Main.prototype.rvYW = 1.0;
+
+    Main.prototype.rvZW = 1.5;
 
     gl = void 0;
 
@@ -62,6 +98,8 @@
 
     vertexPositionBuffer = void 0;
 
+    vertexTextureCoordinateBuffer = void 0;
+
     vertexColorBuffer = void 0;
 
     vertexNormalBuffer = void 0;
@@ -73,6 +111,8 @@
     vertexLinePositionBuffer = void 0;
 
     vertexLineIndexBuffer = void 0;
+
+    cubeTexture = void 0;
 
     initGL = function(canvas) {
       var e;
@@ -102,12 +142,20 @@
             shaders.frag = gl.createShader(gl.FRAGMENT_SHADER);
             gl.shaderSource(shaders.frag, sourceString);
             gl.compileShader(shaders.frag);
-            return shaders.fragReady = true;
+            if (!gl.getShaderParameter(shaders.frag, gl.COMPILE_STATUS)) {
+              return console.log("Error compiling frag: " + gl.getShaderInfoLog(shaders.frag));
+            } else {
+              return shaders.fragReady = true;
+            }
           } else if (type === 'vert') {
             shaders.vert = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(shaders.vert, sourceString);
             gl.compileShader(shaders.vert);
-            return shaders.vertReady = true;
+            if (!gl.getShaderParameter(shaders.vert, gl.COMPILE_STATUS)) {
+              return console.log("Error compiling vert: " + gl.getShaderInfoLog(shaders.vert));
+            } else {
+              return shaders.vertReady = true;
+            }
           } else {
             return alert("unknown shader type: " + type);
           }
@@ -132,11 +180,13 @@
         } else {
           gl.useProgram(shaderProgram);
           shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-          shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
           shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+          shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+          shaderProgram.vertexTextureCoordinateAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
           gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-          gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
           gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+          gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+          gl.enableVertexAttribArray(shaderProgram.vertexTextureCoordinateAttribute);
           shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
           shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
           shaderProgram.tVectorUniform = gl.getUniformLocation(shaderProgram, "uTVector");
@@ -170,14 +220,41 @@
       return gl.uniform4fv(shaderProgram.meshColorUniform, window.main.meshColor);
     };
 
+    window.createCubeTexture = function(text) {
+      var cubeImage, texture;
+      cubeImage = document.getElementById('qcCanvas');
+      cubeTexture = texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      handleTextureLoaded(cubeImage, texture);
+      return texture;
+    };
+
+    handleTextureLoaded = function(image, texture) {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      return gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+
     initBuffers = function() {
-      var i, lineVertices, normals, normalsC, unpackedColors, vertexIndices, vertexLineIndices, vertices;
+      var i, lineVertices, normals, normalsC, textureCoordinates, unpackedColors, vertexIndices, vertexLineIndices, vertices;
       vertexPositionBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
       vertices = [-1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, -1, 1, -1, -1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, 1, -1, -1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, -1, 1, -1, 1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, 1, -1, 1, 1, 1, -1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, -1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, -1, 1, -1, -1, -1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, -1, 1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1];
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
       vertexPositionBuffer.itemSize = 4;
       vertexPositionBuffer.numItems = 192;
+      vertexTextureCoordinateBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordinateBuffer);
+      textureCoordinates = [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+      vertexTextureCoordinateBuffer.itemSize = 2;
+      vertexTextureCoordinateBuffer.numItems = 192;
       vertexColorBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
       unpackedColors = [0.6682, 0.5, 0.125, 0.5, 0.6682, 0.5, 0.125, 0.5, 0.6682, 0.5, 0.125, 0.5, 0.6682, 0.5, 0.125, 0.5, 0.6682, 1.0, 0.125, 0.5, 0.6682, 1.0, 0.125, 0.5, 0.6682, 1.0, 0.125, 0.5, 0.6682, 1.0, 0.125, 0.5, 0.1682, 1.0, 0.125, 0.5, 0.1682, 1.0, 0.125, 0.5, 0.1682, 1.0, 0.125, 0.5, 0.1682, 1.0, 0.125, 0.5, 0.6682, 0.625, 0.25, 0.5, 0.6682, 0.625, 0.25, 0.5, 0.6682, 0.625, 0.25, 0.5, 0.6682, 0.625, 0.25, 0.5, 0.6682, 0.5, 0.625, 0.5, 0.6682, 0.5, 0.625, 0.5, 0.6682, 0.5, 0.625, 0.5, 0.6682, 0.5, 0.625, 0.5, 0.1682, 0.5, 0.625, 0.5, 0.1682, 0.5, 0.625, 0.5, 0.1682, 0.5, 0.625, 0.5, 0.1682, 0.5, 0.625, 0.5, 0.5072, 0.5, 0.405, 0.5, 0.5072, 0.5, 0.405, 0.5, 0.5072, 0.5, 0.405, 0.5, 0.5072, 0.5, 0.405, 0.5, 0.5072, 1.0, 0.405, 0.5, 0.5072, 1.0, 0.405, 0.5, 0.5072, 1.0, 0.405, 0.5, 0.5072, 1.0, 0.405, 0.5, 0.0072, 1.0, 0.405, 0.5, 0.0072, 1.0, 0.405, 0.5, 0.0072, 1.0, 0.405, 0.5, 0.0072, 1.0, 0.405, 0.5, 0.5072, 0.625, 0.53, 0.5, 0.5072, 0.625, 0.53, 0.5, 0.5072, 0.625, 0.53, 0.5, 0.5072, 0.625, 0.53, 0.5, 0.5072, 0.5, 0.905, 0.5, 0.5072, 0.5, 0.905, 0.5, 0.5072, 0.5, 0.905, 0.5, 0.5072, 0.5, 0.905, 0.5, 0.0072, 0.5, 0.905, 0.5, 0.0072, 0.5, 0.905, 0.5, 0.0072, 0.5, 0.905, 0.5, 0.0072, 0.5, 0.905, 0.5, 0.5, 0.5, 0.28125, 0.5, 0.5, 0.5, 0.28125, 0.5, 0.5, 0.5, 0.28125, 0.5, 0.5, 0.5, 0.28125, 0.5, 0.5, 1.0, 0.28125, 0.5, 0.5, 1.0, 0.28125, 0.5, 0.5, 1.0, 0.28125, 0.5, 0.5, 1.0, 0.28125, 0.5, 0.0, 1.0, 0.28125, 0.5, 0.0, 1.0, 0.28125, 0.5, 0.0, 1.0, 0.28125, 0.5, 0.0, 1.0, 0.28125, 0.5, 0.5, 0.625, 0.40625, 0.5, 0.5, 0.625, 0.40625, 0.5, 0.5, 0.625, 0.40625, 0.5, 0.5, 0.625, 0.40625, 0.5, 0.5, 0.5, 0.78125, 0.5, 0.5, 0.5, 0.78125, 0.5, 0.5, 0.5, 0.78125, 0.5, 0.5, 0.5, 0.78125, 0.5, 0.0, 0.5, 0.78125, 0.5, 0.0, 0.5, 0.78125, 0.5, 0.0, 0.5, 0.78125, 0.5, 0.0, 0.5, 0.78125, 0.5, 0.625, 0.5, 0.18, 0.5, 0.625, 0.5, 0.18, 0.5, 0.625, 0.5, 0.18, 0.5, 0.625, 0.5, 0.18, 0.5, 0.625, 1.0, 0.18, 0.5, 0.625, 1.0, 0.18, 0.5, 0.625, 1.0, 0.18, 0.5, 0.625, 1.0, 0.18, 0.5, 0.125, 1.0, 0.18, 0.5, 0.125, 1.0, 0.18, 0.5, 0.125, 1.0, 0.18, 0.5, 0.125, 1.0, 0.18, 0.5, 0.625, 0.625, 0.305, 0.5, 0.625, 0.625, 0.305, 0.5, 0.625, 0.625, 0.305, 0.5, 0.625, 0.625, 0.305, 0.5, 0.625, 0.5, 0.68, 0.5, 0.625, 0.5, 0.68, 0.5, 0.625, 0.5, 0.68, 0.5, 0.625, 0.5, 0.68, 0.5, 0.125, 0.5, 0.68, 0.5, 0.125, 0.5, 0.68, 0.5, 0.125, 0.5, 0.68, 0.5, 0.125, 0.5, 0.68, 0.5, 0.72445, 0.125, 0.245, 0.5, 0.72445, 0.125, 0.245, 0.5, 0.72445, 0.125, 0.245, 0.5, 0.72445, 0.125, 0.245, 0.5, 0.72445, 0.625, 0.245, 0.5, 0.72445, 0.625, 0.245, 0.5, 0.72445, 0.625, 0.245, 0.5, 0.72445, 0.625, 0.245, 0.5, 0.22445, 0.625, 0.245, 0.5, 0.22445, 0.625, 0.245, 0.5, 0.22445, 0.625, 0.245, 0.5, 0.22445, 0.625, 0.245, 0.5, 0.72445, 0.25, 0.37, 0.5, 0.72445, 0.25, 0.37, 0.5, 0.72445, 0.25, 0.37, 0.5, 0.72445, 0.25, 0.37, 0.5, 0.72445, 0.125, 0.745, 0.5, 0.72445, 0.125, 0.745, 0.5, 0.72445, 0.125, 0.745, 0.5, 0.72445, 0.125, 0.745, 0.5, 0.22445, 0.125, 0.745, 0.5, 0.22445, 0.125, 0.745, 0.5, 0.22445, 0.125, 0.745, 0.5, 0.22445, 0.125, 0.745, 0.5, 0.51445, 0.5, 0.18, 0.5, 0.51445, 0.5, 0.18, 0.5, 0.51445, 0.5, 0.18, 0.5, 0.51445, 0.5, 0.18, 0.5, 0.51445, 1.0, 0.18, 0.5, 0.51445, 1.0, 0.18, 0.5, 0.51445, 1.0, 0.18, 0.5, 0.51445, 1.0, 0.18, 0.5, 0.01445, 1.0, 0.18, 0.5, 0.01445, 1.0, 0.18, 0.5, 0.01445, 1.0, 0.18, 0.5, 0.01445, 1.0, 0.18, 0.5, 0.51445, 0.625, 0.305, 0.5, 0.51445, 0.625, 0.305, 0.5, 0.51445, 0.625, 0.305, 0.5, 0.51445, 0.625, 0.305, 0.5, 0.51445, 0.5, 0.68, 0.5, 0.51445, 0.5, 0.68, 0.5, 0.51445, 0.5, 0.68, 0.5, 0.51445, 0.5, 0.68, 0.5, 0.01445, 0.5, 0.68, 0.5, 0.01445, 0.5, 0.68, 0.5, 0.01445, 0.5, 0.68, 0.5, 0.01445, 0.5, 0.68, 0.5, 0.905, 0.5, 0.28125, 0.5, 0.905, 0.5, 0.28125, 0.5, 0.905, 0.5, 0.28125, 0.5, 0.905, 0.5, 0.28125, 0.5, 0.905, 1.0, 0.28125, 0.5, 0.905, 1.0, 0.28125, 0.5, 0.905, 1.0, 0.28125, 0.5, 0.905, 1.0, 0.28125, 0.5, 0.405, 1.0, 0.28125, 0.5, 0.405, 1.0, 0.28125, 0.5, 0.405, 1.0, 0.28125, 0.5, 0.405, 1.0, 0.28125, 0.5, 0.905, 0.625, 0.40625, 0.5, 0.905, 0.625, 0.40625, 0.5, 0.905, 0.625, 0.40625, 0.5, 0.905, 0.625, 0.40625, 0.5, 0.905, 0.5, 0.78125, 0.5, 0.905, 0.5, 0.78125, 0.5, 0.905, 0.5, 0.78125, 0.5, 0.905, 0.5, 0.78125, 0.5, 0.405, 0.5, 0.78125, 0.5, 0.405, 0.5, 0.78125, 0.5, 0.405, 0.5, 0.78125, 0.5, 0.405, 0.5, 0.78125, 0.5, 0.50605, 0.245, 0.28125, 0.5, 0.50605, 0.245, 0.28125, 0.5, 0.50605, 0.245, 0.28125, 0.5, 0.50605, 0.245, 0.28125, 0.5, 0.50605, 0.745, 0.28125, 0.5, 0.50605, 0.745, 0.28125, 0.5, 0.50605, 0.745, 0.28125, 0.5, 0.50605, 0.745, 0.28125, 0.5, 0.00605, 0.745, 0.28125, 0.5, 0.00605, 0.745, 0.28125, 0.5, 0.00605, 0.745, 0.28125, 0.5, 0.00605, 0.745, 0.28125, 0.5, 0.50605, 0.37, 0.40625, 0.5, 0.50605, 0.37, 0.40625, 0.5, 0.50605, 0.37, 0.40625, 0.5, 0.50605, 0.37, 0.40625, 0.5, 0.50605, 0.245, 0.78125, 0.5, 0.50605, 0.245, 0.78125, 0.5, 0.50605, 0.245, 0.78125, 0.5, 0.50605, 0.245, 0.78125, 0.5, 0.00605, 0.245, 0.78125, 0.5, 0.00605, 0.245, 0.78125, 0.5, 0.00605, 0.245, 0.78125, 0.5, 0.00605, 0.245, 0.78125, 0.5];
@@ -235,30 +312,36 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
       }
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordinateBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexTextureCoordinateAttribute, vertexTextureCoordinateBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+      gl.uniform1i(gl.getUniformLocation(shaderProgram, "uSampler"), 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+      setMatrixUniforms();
+      gl.uniform1i(shaderProgram.meshBoolUniform, false);
+      gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
       if (window.main.meshBool) {
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexLinePositionBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexLinePositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexLineIndexBuffer);
         setMatrixUniforms();
         gl.uniform1i(shaderProgram.meshBoolUniform, true);
-        gl.drawElements(gl.LINES, vertexLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+        return gl.drawElements(gl.LINES, vertexLineIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-      setMatrixUniforms();
-      gl.uniform1i(shaderProgram.meshBoolUniform, false);
-      return gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
     };
 
     drawScene = function(px, py, pz, pw) {
       var aa, ab, d, j, k, l, len, len1, len2, len3, len4, len5, len6, len7, len8, len9, m, n, o, p, q, r, ref, ref1, ref10, ref11, ref12, ref13, ref14, ref15, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, results, s, t, u, w, x, y, z;
+      createCubeTexture(' ');
       gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       mat4.perspective(pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.01, 100.0);
       mat4.identity(mvMatrix);
       vec4.set(pVector, px, py, pz, pw);
-      vec4.set(lightDirectionVector, 0.5, 0.5, -1, -1);
+      vec4.set(lightDirectionVector, window.main.lightX, window.main.lightY, window.main.lightZ, window.main.lightW);
       vec4.normalize(lightDirectionVector, lightDirectionVector);
       d = 2.0 + window.main.separation;
       n = window.main.cellCount;
@@ -370,7 +453,7 @@
       charm: 0
     };
 
-    moveSpeed = 0.005;
+    moveSpeed = 0.01;
 
     px = 0;
 
@@ -380,68 +463,17 @@
 
     pw = -30;
 
-    rotationSpeed = 4.0 * Math.PI;
-
-    window.rotateMode = {
-      x: 1,
-      y: 4
-    };
-
-    stepRotationMode = function(dir) {
-      center = {
-        x: 0.0,
-        y: 0.0
-      };
-      switch (dir) {
-        case 0:
-          rotateMode.x = (rotateMode.x + 1) % 6;
-          break;
-        case 1:
-          rotateMode.y = (rotateMode.y + 1) % 6;
-      }
-      return console.log("rotation mode: " + rotateMode);
-    };
-
     modalRotate = function(x0, y0) {
       var x, y;
-      x = rotationSpeed * x0;
-      y = rotationSpeed * y0;
-      switch (rotateMode.x) {
-        case 0:
-          r1Float = x;
-          break;
-        case 1:
-          r2Float = x;
-          break;
-        case 2:
-          r3Float = x;
-          break;
-        case 3:
-          r4Float = x;
-          break;
-        case 4:
-          r5Float = x;
-          break;
-        case 5:
-          r6Float = x;
-      }
-      switch (rotateMode.y) {
-        case 0:
-          return r1Float = y;
-        case 1:
-          return r2Float = y;
-        case 2:
-          return r3Float = y;
-        case 3:
-          return r4Float = y;
-        case 4:
-          return r5Float = y;
-        case 5:
-          return r6Float = y;
-      }
+      x = x0 * 2.0 * Math.PI;
+      y = y0 * 2.0 * Math.PI;
+      r1Float = window.main.rhXY * x + window.main.rvXY * y;
+      r2Float = window.main.rhXZ * x + window.main.rvXZ * y;
+      r3Float = window.main.rhXW * x + window.main.rvXW * y;
+      r4Float = window.main.rhYZ * x + window.main.rvYZ * y;
+      r5Float = window.main.rhYW * x + window.main.rvYW * y;
+      return r6Float = window.main.rhZW * x + window.main.rvZW * y;
     };
-
-    window.auto = true;
 
     rSpeeds = (function() {
       var j, results;
@@ -472,21 +504,38 @@
         px += currentDirection.right * moveSpeed * elapsed;
         py += currentDirection.up * moveSpeed * elapsed;
         pw += currentDirection.charm * moveSpeed * elapsed;
-        if (auto) {
+        if (window.main.autoRotate) {
           updateSpeeds();
-          r1Float += rSpeeds[0] * elapsed * rotationSpeed / 50000;
-          r2Float += rSpeeds[1] * elapsed * rotationSpeed / 50000;
-          r3Float += rSpeeds[2] * elapsed * rotationSpeed / 50000;
-          r4Float += rSpeeds[3] * elapsed * rotationSpeed / 50000;
-          r5Float += rSpeeds[4] * elapsed * rotationSpeed / 50000;
-          r6Float += rSpeeds[5] * elapsed * rotationSpeed / 50000;
+          r1Float += rSpeeds[0] * elapsed * window.main.autoRotateSpeed / 50000;
+          r2Float += rSpeeds[1] * elapsed * window.main.autoRotateSpeed / 50000;
+          r3Float += rSpeeds[2] * elapsed * window.main.autoRotateSpeed / 50000;
+          r4Float += rSpeeds[3] * elapsed * window.main.autoRotateSpeed / 50000;
+          r5Float += rSpeeds[4] * elapsed * window.main.autoRotateSpeed / 50000;
+          r6Float += rSpeeds[5] * elapsed * window.main.autoRotateSpeed / 50000;
         }
       }
       return lastTime = timeNow;
     };
 
+    timeNow = 0;
+
+    fps = 0;
+
+    timeLast = 0;
+
+    computeFPS = function() {
+      timeNow = new Date().getTime();
+      fps++;
+      if (timeNow - timeLast >= 1000) {
+        document.getElementById('fps').innerHTML = "FPS: " + (Number(fps * 1000.0 / (timeNow - timeLast)).toPrecision(5));
+        timeLast = timeNow;
+        return fps = 0;
+      }
+    };
+
     tick = function() {
       requestAnimFrame(tick);
+      computeFPS();
       drawScene(px, py, pz, pw);
       return animate();
     };
@@ -592,6 +641,7 @@
       initGL(canvas);
       loadShader('shaders/fragment.glsl', 'frag');
       loadShader('shaders/vertex.glsl', 'vert');
+      cubeTexture = createCubeTexture("Hello World!");
       waitForShaders = function(continuation) {
         if (!(shaders.fragReady && shaders.vertReady)) {
           return setTimeout((function() {
@@ -604,7 +654,7 @@
       finishGLInit = function() {
         initShaders();
         initBuffers();
-        gl.clearColor(0.125, 0.125, 0.125, 1);
+        gl.clearColor(0.0, 0.0, 0.0, 1);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.enable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
@@ -620,33 +670,14 @@
       return window.location.reload();
     }));
 
-    window.udb = function() {
-      var idx, idy;
-      document.getElementById('bx0').style.background = 'white';
-      document.getElementById('by0').style.background = 'white';
-      document.getElementById('bx1').style.background = 'white';
-      document.getElementById('by1').style.background = 'white';
-      document.getElementById('bx2').style.background = 'white';
-      document.getElementById('by2').style.background = 'white';
-      document.getElementById('bx3').style.background = 'white';
-      document.getElementById('by3').style.background = 'white';
-      document.getElementById('bx4').style.background = 'white';
-      document.getElementById('by4').style.background = 'white';
-      document.getElementById('bx5').style.background = 'white';
-      document.getElementById('by5').style.background = 'white';
-      idx = "bx" + rotateMode.x;
-      idy = "by" + rotateMode.y;
-      document.getElementById(idx).style.background = 'red';
-      return document.getElementById(idy).style.background = 'red';
-    };
-
     return Main;
 
   })();
 
   window.onload = function() {
-    var glbController, gldtController, gui, meshColorController;
+    var folderLightDirection, folderRotationControl, glbController, gldtController, gui, horizontalRotations, meshColorController, verticalRotations;
     window.main = new Main();
+    window.testing();
     gui = new dat.GUI();
     gui.add(main, 'cornerNormals');
     gui.add(main, 'meshBool');
@@ -669,7 +700,7 @@
       }
     });
     glbController = gui.add(main, 'GLBlend');
-    return glbController.onChange(function(v) {
+    glbController.onChange(function(v) {
       var GL;
       GL = window.main.GL;
       if (v) {
@@ -678,6 +709,32 @@
         return GL.disable(GL.BLEND);
       }
     });
+    folderLightDirection = gui.addFolder('light direction');
+    folderLightDirection.add(main, 'lightX');
+    folderLightDirection.add(main, 'lightY');
+    folderLightDirection.add(main, 'lightZ');
+    folderLightDirection.add(main, 'lightW');
+    folderLightDirection.open();
+    gui.add(main, 'autoRotate');
+    gui.add(main, 'autoRotateSpeed');
+    folderRotationControl = gui.addFolder('rotation control');
+    horizontalRotations = folderRotationControl.addFolder('horizontal');
+    horizontalRotations.add(main, 'rhXY');
+    horizontalRotations.add(main, 'rhXZ');
+    horizontalRotations.add(main, 'rhXW');
+    horizontalRotations.add(main, 'rhYZ');
+    horizontalRotations.add(main, 'rhYW');
+    horizontalRotations.add(main, 'rhZW');
+    verticalRotations = folderRotationControl.addFolder('vertical');
+    verticalRotations.add(main, 'rvXY');
+    verticalRotations.add(main, 'rvXZ');
+    verticalRotations.add(main, 'rvXW');
+    verticalRotations.add(main, 'rvYZ');
+    verticalRotations.add(main, 'rvYW');
+    verticalRotations.add(main, 'rvZW');
+    folderRotationControl.open();
+    horizontalRotations.open();
+    return verticalRotations.open();
   };
 
 }).call(this);
