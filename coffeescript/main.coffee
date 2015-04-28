@@ -42,13 +42,13 @@ class Main
   pVector = vec4.create()
   lightDirectionVector = vec4.create()
 
-  randAngle = -> Math.random() - 0.5
-  r1Float = randAngle()
-  r2Float = randAngle()
-  r3Float = randAngle()
-  r4Float = randAngle()
-  r5Float = randAngle()
-  r6Float = randAngle()
+  randAngle = -> 0.25 * Math.random() - 0.125
+  r1Float = 8.0 * Math.PI * randAngle()
+  r2Float = 8.0 * Math.PI * randAngle()
+  r3Float = 8.0 * Math.PI * randAngle()
+  r4Float = 8.0 * Math.PI * randAngle()
+  r5Float = 8.0 * Math.PI * randAngle()
+  r6Float = 8.0 * Math.PI * randAngle()
 
   # put GL buffers in scope
   vertexPositionBuffer = undefined
@@ -1141,7 +1141,7 @@ class Main
     # get scene ready
     gl.viewport 0, 0, gl.viewportWidth, gl.viewportHeight
     gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    mat4.perspective pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.01, 100.0
+    mat4.perspective pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.001, 100.0
     mat4.identity mvMatrix
     #mat4.translate mvMatrix, mvMatrix, (new Float32Array([0, 0, 0]))
     #mat4.rotate(mvMatrix, mvMatrix, 1.0, new Float32Array([1, 1, 1]))

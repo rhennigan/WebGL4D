@@ -111,20 +111,20 @@
   void main(void) {
     float d = float(order);
     float sum = 0.0;
-    float dX = 0.5 * p;
+    float dX = 0.1 * p;
     float dY = 0.2 * p;
     float s = SCALE * (sin(p) + 1.5) + float(5*order);
 
     // float x = pos.x + dX;
     // float y = pos.y + dY;
 
-    float x = dX + aspect * pos.x * cos(p) - pos.y * sin(p);
-    float y = dY + pos.y * cos(p) + aspect * pos.x * sin(p);
+    float x = dX + aspect * pos.x * cos(0.25*p) - pos.y * sin(0.25*p);
+    float y = dY + pos.y * cos(0.25*p) + aspect * pos.x * sin(0.25*p);
 
     for (int k = 0; k < 30; k++) {
       if (k < order) {
         sum += cos(s * x * cos(float(k) * PI / d) -
-                   s * y * sin(float(k) * PI / d) + 40.0*p);
+                   s * y * sin(float(k) * PI / d) + 50.0*p);
       }
     }
     sum *= MAG;

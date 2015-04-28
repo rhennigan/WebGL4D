@@ -81,20 +81,20 @@
     lightDirectionVector = vec4.create();
 
     randAngle = function() {
-      return Math.random() - 0.5;
+      return 0.25 * Math.random() - 0.125;
     };
 
-    r1Float = randAngle();
+    r1Float = 8.0 * Math.PI * randAngle();
 
-    r2Float = randAngle();
+    r2Float = 8.0 * Math.PI * randAngle();
 
-    r3Float = randAngle();
+    r3Float = 8.0 * Math.PI * randAngle();
 
-    r4Float = randAngle();
+    r4Float = 8.0 * Math.PI * randAngle();
 
-    r5Float = randAngle();
+    r5Float = 8.0 * Math.PI * randAngle();
 
-    r6Float = randAngle();
+    r6Float = 8.0 * Math.PI * randAngle();
 
     vertexPositionBuffer = void 0;
 
@@ -338,7 +338,7 @@
       createCubeTexture(' ');
       gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      mat4.perspective(pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.01, 100.0);
+      mat4.perspective(pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.001, 100.0);
       mat4.identity(mvMatrix);
       vec4.set(pVector, px, py, pz, pw);
       vec4.set(lightDirectionVector, window.main.lightX, window.main.lightY, window.main.lightZ, window.main.lightW);
